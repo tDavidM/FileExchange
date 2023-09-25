@@ -3,7 +3,7 @@ object MainForm: TMainForm
   Top = 117
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
-  Caption = 'Exchange V2.2'
+  Caption = 'Exchange V2.2.1'
   ClientHeight = 248
   ClientWidth = 937
   Color = clBtnFace
@@ -112,11 +112,10 @@ object MainForm: TMainForm
     end
     object lServRoot: TLabel
       Left = 9
-      Top = 181
+      Top = 182
       Width = 79
       Height = 13
       Caption = 'Target Directory:'
-      OnDblClick = lServRootDblClick
     end
     object lLocalIP: TLabel
       Left = 69
@@ -134,9 +133,9 @@ object MainForm: TMainForm
     end
     object CmdServ: TButton
       Left = 209
-      Top = 13
+      Top = 12
       Width = 112
-      Height = 23
+      Height = 24
       Caption = 'Activate'
       TabOrder = 0
       OnClick = CmdServClick
@@ -146,9 +145,13 @@ object MainForm: TMainForm
       Top = 41
       Width = 312
       Height = 134
+      Hint = 'Shift+Clic to erase'
+      ParentShowHint = False
       ReadOnly = True
       ScrollBars = ssVertical
+      ShowHint = True
       TabOrder = 1
+      OnMouseDown = ServerOutMouseDown
     end
     object PGBarRecvPart: TProgressBar
       Left = 8
@@ -158,6 +161,16 @@ object MainForm: TMainForm
       Smooth = True
       Step = 5
       TabOrder = 2
+    end
+    object cbFileTime: TCheckBox
+      Left = 152
+      Top = 218
+      Width = 169
+      Height = 17
+      Alignment = taLeftJustify
+      Caption = 'Deactivate received Date/Time'
+      TabOrder = 3
+      OnClick = cbFileTimeClick
     end
   end
   object BoxSend: TGroupBox
@@ -191,16 +204,17 @@ object MainForm: TMainForm
     end
     object TxtIp: TEdit
       Left = 120
-      Top = 15
-      Width = 113
+      Top = 14
+      Width = 109
       Height = 21
       TabOrder = 0
+      OnChange = TxtIpChange
     end
     object CmdSend: TButton
-      Left = 239
-      Top = 13
-      Width = 82
-      Height = 23
+      Left = 235
+      Top = 12
+      Width = 86
+      Height = 24
       Caption = 'Send'
       TabOrder = 1
       OnClick = CmdSendClick
@@ -208,11 +222,15 @@ object MainForm: TMainForm
     object ClientOut: TMemo
       Left = 8
       Top = 41
-      Width = 312
+      Width = 313
       Height = 134
+      Hint = 'Shift+Clic to erase'
+      ParentShowHint = False
       ReadOnly = True
       ScrollBars = ssVertical
+      ShowHint = True
       TabOrder = 2
+      OnMouseDown = ClientOutMouseDown
     end
     object PGBarSendTotal: TProgressBar
       Left = 8
@@ -232,6 +250,16 @@ object MainForm: TMainForm
       Smooth = True
       Step = 5
       TabOrder = 4
+    end
+    object cbWaitPoke: TCheckBox
+      Left = 192
+      Top = 218
+      Width = 129
+      Height = 17
+      Alignment = taLeftJustify
+      Caption = 'Wait to receive a Poke'
+      TabOrder = 5
+      OnClick = cbWaitPokeClick
     end
   end
   object BoxDiscover: TGroupBox
@@ -257,8 +285,8 @@ object MainForm: TMainForm
       Caption = 'Port (Client/Server):'
     end
     object lDbg: TLabel
-      Left = 109
-      Top = 214
+      Left = 149
+      Top = 68
       Width = 36
       Height = 13
       Alignment = taCenter
@@ -286,18 +314,18 @@ object MainForm: TMainForm
     end
     object bClear: TButton
       Left = 7
-      Top = 211
+      Top = 210
       Width = 69
-      Height = 21
+      Height = 22
       Caption = 'Refresh'
       TabOrder = 2
       OnClick = bClearClick
     end
     object bSelect: TButton
-      Left = 178
-      Top = 211
+      Left = 174
+      Top = 210
       Width = 69
-      Height = 21
+      Height = 22
       Caption = 'Select'
       TabOrder = 3
       OnClick = bSelectClick
@@ -322,6 +350,56 @@ object MainForm: TMainForm
       ParentBiDiMode = False
       TabOrder = 5
       OnClick = cbEncryptClick
+    end
+    object bPoke: TButton
+      Left = 83
+      Top = 210
+      Width = 55
+      Height = 22
+      Caption = 'Poke'
+      Enabled = False
+      TabOrder = 6
+      OnClick = bPokeClick
+    end
+    object bbMessage: TBitBtn
+      Left = 144
+      Top = 210
+      Width = 23
+      Height = 22
+      Glyph.Data = {
+        AA030000424DAA03000000000000360000002800000011000000110000000100
+        1800000000007403000000000000000000000000000000000000FFFFFFFFFFFF
+        FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+        FFFFFFFFFFFFFFFFFFFFFFFFFF00FBFBFBBABABACECECECDCDCDCDCDCDCDCDCD
+        CDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCDCECECEBABABAFBFB
+        FB00E3E3E3000000020202000000000000000000000000000000000000000000
+        000000000000000000000000020202000000E3E3E300E8E8E800000000000000
+        0000000000000000000000000000000000000000000000000000000000000000
+        000000000000E8E8E800EAEAEA00000000000000000000000000000000000000
+        0000282828000000000000000000000000000000000000000000EAEAEA00EAEA
+        EA000000000000000000000000000000000000515151D0D0D051515100000000
+        0000000000000000000000000000EAEAEA00EAEAEA0000000000000000000000
+        000E0E0E818181EDEDEDFFFFFFEDEDED78787806060600000000000000000000
+        0000EAEAEA00EAEAEA000000000000000000282828CDCDCDFFFFFFFFFFFFFFFF
+        FFFFFFFFFFFFFFCCCCCC272727000000000000000000EAEAEA00E9E9E9000000
+        000000676767FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+        FF6E6E6E000000000000E9E9E900E4E4E4000000999999FFFFFFEFEFEFE6E6E6
+        E6E6E6E6E6E6E6E6E6E6E6E6E6E6E6E6E6E6EDEDEDFFFFFFA7A7A7000000E2E2
+        E200EDEDED1E1E1E1A1A1A000000000000020202020202020202020202020202
+        0202020202020000000000001B1B1B242424EFEFEF00FFFFFFD9D9D94C4C4C09
+        09090000000000000000000000000000000000000000000000000000000F0F0F
+        505050DEDEDEFFFFFF00FFFFFFFFFFFFF9F9F999999935353500000000000000
+        0000000000000000000000000000404040A4A4A4FFFFFFFFFFFFFFFFFF00FFFF
+        FFFFFFFFFFFFFFFFFFFFCCCCCC6F6F6F0000000000000000000000000D0D0D86
+        8686D7D7D7FFFFFFFFFFFFFFFFFFFFFFFF00FFFFFFFFFFFFFFFFFFFFFFFFFFFF
+        FFF7F7F7B6B6B61F1F1F000000515151BABABAFFFFFFFFFFFFFFFFFFFFFFFFFF
+        FFFFFFFFFF00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFD9D9D9B5B5
+        B5F1F1F1FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00FFFFFFFFFFFF
+        FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+        FFFFFFFFFFFFFFFFFFFFFFFFFF00}
+      ParentDoubleBuffered = True
+      TabOrder = 7
+      OnClick = bbMessageClick
     end
   end
   object OpenAny: TOpenDialog

@@ -36,6 +36,7 @@ void __fastcall TMainForm::CmdServClick(TObject *Sender)
 {
    if (this->IdTCPFileServer->Active) {
       this->IdTCPFileServer->Active = false;
+      this->bPoke->Enabled = false;
       this->ServerOut->Lines->Add("Deactivate");
       this->CmdServ->Caption = "Activate";
       this->lServRoot->Caption = "Target Directory:";
@@ -44,6 +45,7 @@ void __fastcall TMainForm::CmdServClick(TObject *Sender)
       if(SelectDirectory("Select the Directory where the files will be placed","", PathSortie)) {
          //PntServ = new ThServ(false,sortie+"\\");
          IdTCPFileServer->Active = true;
+         this->bPoke->Enabled = true;
          this->ServerOut->Lines->Add("Activate, port: " + TxtPort->Text);
          this->ServerOut->Lines->Add("   Root: " + PathSortie);
          if (DisableFileTime)
@@ -59,62 +61,92 @@ void __fastcall TMainForm::CmdServClick(TObject *Sender)
 //---------------------------------------------------------------------------
 void __fastcall TMainForm::CmdSendClick(TObject *Sender)
 {
+   bool DelaySend = false;
+   int CmpSearch = 0;
+
    if (this->TxtIp->Text == "" )
       ShowMessage("Specify the IP address of the server");
-   else if (this->OpenAny->Execute() == true) {
+   else if (this->OpenAny->Execute() == true) { //multiselect
       this->TxtPort->Enabled = false;
-      //multiselect
-      this->FilePile  = NULL;
-      this->CmpSearch = 0;
-      this->CmpSend   = 0;
-      for (int i=0; i<this->OpenAny->Files->Count; i++) {
-         this->SearchFiles(this->OpenAny->Files->Strings[i]);
-      }
-      this->PGBarSendTotal->Max = this->CmpSearch;
-      this->SendFile(ExtractFilePath(ExtractFilePath(this->OpenAny->Files->Strings[0])));
-   }
-   this->TxtPort->Enabled = true;
+      fClipboard->bSend->Enabled = false;
+      DelaySend = this->FileList != NULL || this->cbWaitPoke->Checked;
 
-   this->CmpSearch = 0;
-   this->CmpSend = 0;
-   this->PGBarSendTotal->Position = 0;
-   this->PGBarSendTotal->Max = 100;
+      for (int i=0; i<this->OpenAny->Files->Count; i++) {
+         CmpSearch += this->SearchFiles(this->OpenAny->Files->Strings[i],
+                                        ExtractFilePath(ExtractFilePath(this->OpenAny->Files->Strings[0])));
+      }
+
+      if (!DelaySend) {
+         this->CmpSend   = 0;
+         this->PGBarSendTotal->Max = CmpSearch;
+         this->SendFile();
+      } else {
+         this->PGBarSendTotal->Max += CmpSearch;
+         if (this->cbWaitPoke->Checked) {
+            this->ClientOut->Lines->Add(IntToStr(CmpSearch) + " File(s) awaiting...");
+            this->CmpSend = 0;
+         }
+      }
+   }
+
+   if (!DelaySend) {
+      this->TxtPort->Enabled = true;
+      fClipboard->bSend->Enabled = true;
+      this->CmpSend = 0;
+      this->PGBarSendTotal->Position = 0;
+      this->PGBarSendTotal->Max = 100;
+   }
 }
 //---------------------------------------------------------------------------
-void __fastcall TMainForm::DropFiles(TMessage &Message)
+void TMainForm::DropFiles(TMessage &Message)
 {
    int nFiles;
    //char buffer[65536];
    wchar_t buffer[65536];
-   this->FilePile = NULL;
-   if (this->TxtIp->Text != "" ) {
+   bool DelaySend = false;
+   int CmpSearch = 0;
+
+   if (this->TxtIp->Text == "" ) {
+      ShowMessage("Specify the IP address of the server");
+   } else {
       this->TxtPort->Enabled = false;
+      fClipboard->bSend->Enabled = false;
       nFiles = DragQueryFile((HDROP)Message.WParam, 0xFFFFFFFF, NULL, 0);
-      this->CmpSearch = 0;
-      this->CmpSend   = 0;
+      DelaySend = this->FileList != NULL || this->cbWaitPoke->Checked;
+
       for (int i=0; i<nFiles; i++) {
          DragQueryFileW((HDROP)Message.WParam, i, buffer, 65536);
-         this->SearchFiles(buffer);
+         CmpSearch += this->SearchFiles(buffer, ExtractFilePath(buffer));
       }
       DragFinish((HDROP)Message.WParam);
-      this->PGBarSendTotal->Max = this->CmpSearch;
-      this->SendFile(ExtractFilePath(buffer));
-   } else {
-      ShowMessage("Specify the IP address of the server");
-   }
-   this->TxtPort->Enabled = true;
 
-   this->CmpSearch = 0;
-   this->CmpSend = 0;
-   this->PGBarSendTotal->Position = 0;
-   this->PGBarSendTotal->Max = 100;
+      if (!DelaySend) {
+         this->CmpSend   = 0;
+         this->PGBarSendTotal->Max = CmpSearch;
+         this->SendFile();
+      } else {
+         this->PGBarSendTotal->Max += CmpSearch;
+         if (this->cbWaitPoke->Checked) {
+            this->ClientOut->Lines->Add(IntToStr(CmpSearch) + " File(s) awaiting...");
+            this->CmpSend = 0;
+         }
+      }
+   }
+
+   if (!DelaySend) {
+      this->TxtPort->Enabled = true;
+      fClipboard->bSend->Enabled = true;
+      this->CmpSend = 0;
+      this->PGBarSendTotal->Position = 0;
+      this->PGBarSendTotal->Max = 100;
+   }
 }
 //---------------------------------------------------------------------------
-void __fastcall TMainForm::SearchFiles(String FilePath)
+int TMainForm::SearchFiles(String FilePath, String FileRoot)
 {
-   FileStack *New;
-   //FileStack *Curr;
-   int FHandle;
+   tFileList *New, *Last;
+   //tFileList *Curr;
+   int FHandle, Cmp = 0;
    FILETIME modtime;
 
    if(DirectoryExists(FilePath)) {
@@ -125,12 +157,14 @@ void __fastcall TMainForm::SearchFiles(String FilePath)
 
       while ((ent = readdir(dir)) != NULL) {
          if (strcmp(ent->d_name,".") != 0 && strcmp(ent->d_name,"..") != 0)
-            SearchFiles(FilePath + "\\" + ent->d_name);
+            Cmp += SearchFiles(FilePath + "\\" + ent->d_name, FileRoot);
       }
       closedir(dir);
+      return Cmp;
    } else {
-      New = new FileStack;
-      New->Path = FilePath;
+      New = new tFileList;
+      New->Path     = FilePath;
+      New->FileRoot = FileRoot;
 
       String FilePathBuff = FilePath;
       HANDLE fh = CreateFileW(FilePathBuff.c_str(), GENERIC_READ | FILE_WRITE_ATTRIBUTES, 0, NULL, OPEN_EXISTING, 0, NULL);
@@ -153,14 +187,23 @@ void __fastcall TMainForm::SearchFiles(String FilePath)
          FileClose( FHandle );
       }
 
-      New->Next = this->FilePile;
-      this->FilePile = New;
-      this->CmpSearch++;
+      New->Next = NULL;
+
+      if (this->FileList != NULL) {
+         Last = this->FileList;
+         while(Last->Next != NULL)
+            Last = Last->Next;
+         Last->Next = New;
+      } else
+        this->FileList = New;
+
+      Application->ProcessMessages();
+      return 1;
    }
 }
 
 //---------------------------------------------------------------------------
-void __fastcall TMainForm::SendFile(String FileRoot)
+void TMainForm::SendFile()
 {
    String FilePath, Data;
    int ReadSize;
@@ -171,36 +214,36 @@ void __fastcall TMainForm::SendFile(String FileRoot)
 
    this->ClientOut->Lines->Add("Sending...");
 
-   while(this->FilePile != NULL)
+   while(this->FileList != NULL)
    {
       try
       {
          IdTCPFileClient->Host = TxtIp->Text;
          IdTCPFileClient->Connect();
          this->ClientOut->Lines->Add("Working (" + IdTCPFileClient->Socket->Binding->PeerIP + "): " +
-                                     ExtractFileName(this->FilePile->Path));
-         this->PGBarSendPart->Max = this->FilePile->Size/PAYLOADSIZE;
+                                     ExtractFileName(this->FileList->Path));
+         this->PGBarSendPart->Max = this->FileList->Size/PAYLOADSIZE;
          this->PGBarSendPart->Position = 0;
 
          Application->ProcessMessages();
 
-         FilePath = AnsiReplaceText(this->FilePile->Path, FileRoot, "");
+         FilePath = AnsiReplaceText(this->FileList->Path, this->FileList->FileRoot, "");
 
-         IdTCPFileClient->Socket->WriteLn(IntToStr((__int64)this->FilePile->Size));
+         IdTCPFileClient->Socket->WriteLn(IntToStr((__int64)this->FileList->Size));
          IdTCPFileClient->Socket->WriteLn(FilePath, TIdTextEncoding_UTF8);
-         IdTCPFileClient->Socket->WriteLn(IntToStr((int)this->FilePile->TimeLow));
-         IdTCPFileClient->Socket->WriteLn(IntToStr((int)this->FilePile->TimeHigh));
+         IdTCPFileClient->Socket->WriteLn(IntToStr((int)this->FileList->TimeLow));
+         IdTCPFileClient->Socket->WriteLn(IntToStr((int)this->FileList->TimeHigh));
 
          //192-bit (24-byte)
-         RunningKey = SetRunKey(this->KeyString + FilePath + IntToStr((__int64)this->FilePile->Size));
+         RunningKey = SetRunKey(this->KeyString + FilePath + IntToStr((__int64)this->FileList->Size));
 
          Data = IdTCPFileClient->Socket->ReadLn();
          this->ClientOut->Lines->Add("Server: " + Data);
 
-         Fichier=new TFileStream(this->FilePile->Path, fmOpenRead);
-         //FILE* Fichier = fopen(AnsiString(this->FilePile->Path).c_str(), "rb") ;
-         //for( __int64 i=0 ; i<this->FilePile->Size ; i++ ) {
-         for( __int64 i=this->FilePile->Size ; i>0 ; i=i-PAYLOADSIZE ) {
+         Fichier=new TFileStream(this->FileList->Path, fmOpenRead);
+         //FILE* Fichier = fopen(AnsiString(this->FileList->Path).c_str(), "rb") ;
+         //for( __int64 i=0 ; i<this->FileList->Size ; i++ ) {
+         for( __int64 i=this->FileList->Size ; i>0 ; i=i-PAYLOADSIZE ) {
             ReadSize = i>=PAYLOADSIZE?PAYLOADSIZE:i;
 
             Buffer.set_length(ReadSize);
@@ -228,14 +271,15 @@ void __fastcall TMainForm::SendFile(String FileRoot)
          //fclose(Fichier);
          Fichier->Free();
 
-         this->ClientOut->Lines->Add("Sent: " + this->FilePile->Path);
+         this->ClientOut->Lines->Add("Sent: " + this->FileList->Path);
 
          this->PGBarSendPart->Position = 0;
          this->CmpSend++;
          this->PGBarSendTotal->Position = this->CmpSend;
+         Application->ProcessMessages();
 
-         FileStack *FileDone = this->FilePile;
-         this->FilePile = this->FilePile->Next;
+         tFileList *FileDone = this->FileList;
+         this->FileList = this->FileList->Next;
          delete FileDone;
 
          IdTCPFileClient->Disconnect();
@@ -245,19 +289,79 @@ void __fastcall TMainForm::SendFile(String FileRoot)
          Fichier->Free();
          IdTCPFileClient->Disconnect();
 
-         this->ClientOut->Lines->Add("ERROR: " + this->FilePile->Path);
+         this->ClientOut->Lines->Add("ERROR: " + this->FileList->Path);
          this->ClientOut->Lines->Add(e.Message);
 
-         if (FilePile != NULL) {
-            FileStack *FileDone = this->FilePile;
-            this->FilePile = this->FilePile->Next;
+         if (FileList != NULL) {
+            tFileList *FileDone = this->FileList;
+            this->FileList = this->FileList->Next;
             delete FileDone;
          }
 
          this->PGBarSendPart->Position = 0;
          this->CmpSend++;
          this->PGBarSendTotal->Position = this->CmpSend;
+         Application->ProcessMessages();
       }
+   }
+}
+
+//---------------------------------------------------------------------------
+void TMainForm::SendMessage(String Message)
+{
+   String Data;
+   TBytes MessageBytes;
+   int ReadSize;
+   TIdBytes Buffer;
+   TByteDynArray RunningKey;
+
+   this->ClientOut->Lines->Add("Sending message");
+   try
+   {
+      IdTCPFileClient->Host = TxtIp->Text;
+      IdTCPFileClient->Connect();
+      this->ClientOut->Lines->Add("Working (" + IdTCPFileClient->Socket->Binding->PeerIP + "): ");
+      Application->ProcessMessages();
+
+      MessageBytes = WideBytesOf(Message);
+
+      IdTCPFileClient->Socket->WriteLn(IntToStr(MessageBytes.Length));
+      IdTCPFileClient->Socket->WriteLn("?Message*:", TIdTextEncoding_UTF8);
+      IdTCPFileClient->Socket->WriteLn(IntToStr(0));
+      IdTCPFileClient->Socket->WriteLn(IntToStr(0));
+
+      //192-bit (24-byte)
+      RunningKey = SetRunKey(this->KeyString + "?Message*:" + IntToStr(MessageBytes.Length));
+
+      Data = IdTCPFileClient->Socket->ReadLn();
+      this->ClientOut->Lines->Add("Server: " + Data);
+
+      for( int i=MessageBytes.Length ; i>0 ; i=i-PAYLOADSIZE ) {
+         ReadSize = i>=PAYLOADSIZE?PAYLOADSIZE:i;
+         Buffer.set_length(ReadSize);
+
+         for ( int j=0; j<ReadSize; j++)
+            Buffer[j] = MessageBytes[j+(MessageBytes.Length-i)];
+
+         if (cbEncrypt->Checked && ReadSize>0)
+            RunningKey = this->OFBCipher(Buffer, ReadSize, this->KeyString, RunningKey);
+
+         IdTCPFileClient->Socket->Write(Buffer, ReadSize);
+         Application->ProcessMessages();
+         if (i%32768 == 0) {
+            Data = IdTCPFileClient->Socket->ReadLn();
+            this->Invalidate();
+            Application->ProcessMessages();
+         }
+      }
+      IdTCPFileClient->Disconnect();
+   }
+   catch(Exception& e)
+   {
+      IdTCPFileClient->Disconnect();
+
+      this->ClientOut->Lines->Add("ERROR: Message");
+         this->ClientOut->Lines->Add(e.Message);
    }
 }
 
@@ -337,25 +441,25 @@ void __fastcall TMainForm::FormCreate(TObject *Sender)
 
 void __fastcall TMainForm::TxtPortExit(TObject *Sender)
 {
-   IdUDPNetClient->Active = false;
-   IdUDPNetServer->Active = false;
-   IdUDPNetClient->Port   = StrToInt(TxtPort->Text)-33;
+   this->IdUDPNetClient->Active = false;
+   this->IdUDPNetServer->Active = false;
+   this->IdUDPNetClient->Port   = StrToInt(TxtPort->Text)-33;
 
-   IdUDPNetServer->DefaultPort = StrToInt(TxtPort->Text)-33;
-   IdUDPNetServer->Active      = true;
+   this->IdUDPNetServer->DefaultPort = StrToInt(TxtPort->Text)-33;
+   this->IdUDPNetServer->Active      = true;
 
-   IdTCPFileClient->Port = StrToInt(TxtPort->Text);
+   this->IdTCPFileClient->Port = StrToInt(TxtPort->Text);
 
    bool Actif = IdTCPFileServer->Active;
-   IdTCPFileServer->Active      = false;
-   IdTCPFileServer->DefaultPort = StrToInt(TxtPort->Text);
-   IdTCPFileServer->Bindings->Clear();
-   IdTCPFileServer->Bindings->Add()->SetBinding("0.0.0.0", StrToInt(TxtPort->Text));
+   this->IdTCPFileServer->Active      = false;
+   this->IdTCPFileServer->DefaultPort = StrToInt(TxtPort->Text);
+   this->IdTCPFileServer->Bindings->Clear();
+   this->IdTCPFileServer->Bindings->Add()->SetBinding("0.0.0.0", StrToInt(TxtPort->Text));
    //IdTCPFileServer->Bindings->Add();
    //IdTCPFileServer->Bindings->Items[0]->IP="0.0.0.0";
    //IdTCPFileServer->Bindings->Items[0]->Port=StrToInt(TxtPort->Text);
    if (Actif) {
-      IdTCPFileServer->Active = true;
+      this->IdTCPFileServer->Active = true;
       this->ServerOut->Lines->Add("Reactivate, port: " + TxtPort->Text);
    }
 }
@@ -386,6 +490,34 @@ void __fastcall TMainForm::UpdateListTimer(TObject *Sender)
       this->lLocalIP->Caption = IdIPWatch->CurrentIP;
    } catch (Exception& e) {
       this->lLocalIP->Caption = IdIPWatch->CurrentIP;
+   }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::bPokeClick(TObject *Sender)
+{
+   String IPAddr;
+
+   for(int i = 0; i<this->lbLocalNet->Count ; i++) {
+      if (this->lbLocalNet->Selected[i]) {
+         String Data= this->lbLocalNet->Items->Strings[i];
+         IPAddr = Data.SubString(Pos( "(", Data)+1, Data.Length()-Pos("(",Data)-1);
+      }
+   }
+
+   try {
+      this->UpdateList->Enabled = false;
+      this->IdUDPNetClient->BroadcastEnabled = false;
+      this->IdUDPNetClient->Host   = IPAddr;
+      this->IdUDPNetClient->Active = true;
+      this->IdUDPNetClient->Send("TigerMessage:" + IdIPWatch->CurrentIP + ">Poke");
+      this->IdUDPNetClient->Active = false;
+      this->IdUDPNetClient->Host = "";
+      this->IdUDPNetClient->BroadcastEnabled = true;
+      this->UpdateList->Enabled = true;
+
+   } catch (Exception& e) {
+        this->UpdateList->Enabled = true;
    }
 }
 //---------------------------------------------------------------------------
@@ -421,7 +553,68 @@ void __fastcall TMainForm::IdUDPNetServerUDPRead(TIdUDPListenerThread *AThread, 
             }
          }
       }
+   } else if (RawData.Pos("TigerMessage:") == 1) {
+      if (this->CmpSend == 0) {
+         this->TxtIp->Text = RawData.SubString(Pos(":",RawData)+1, Pos(">",RawData)-Pos(":",RawData)-1);
+         this->SendFile();
+
+         this->TxtPort->Enabled = true;
+         fClipboard->bSend->Enabled = true;
+         this->CmpSend = 0;
+         this->PGBarSendTotal->Position = 0;
+         this->PGBarSendTotal->Max = 100;
+      }
    }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::bbMessageClick(TObject *Sender)
+{
+   fClipboard->Show();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::ServerOutMouseDown(TObject *Sender, TMouseButton Button,
+          TShiftState Shift, int X, int Y)
+{
+   if (Button == mbLeft && Shift.Contains(ssCtrl))
+      this->ServerOut->Lines->Clear();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::ClientOutMouseDown(TObject *Sender, TMouseButton Button,
+          TShiftState Shift, int X, int Y)
+{
+   if (Button == mbLeft && Shift.Contains(ssCtrl))
+      this->ClientOut->Lines->Clear();
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::cbWaitPokeClick(TObject *Sender)
+{
+   if (this->cbWaitPoke->Checked)
+      this->TxtIp->Text = "0.0.0.0";
+   else {
+      if (this->TxtIp->Text == "0.0.0.0")
+         this->TxtIp->Text = "";
+
+      if (this->FileList != NULL) {
+         tFileList *FileDel;
+         while (this->FileList != NULL) {
+            FileDel = this->FileList;
+            this->FileList = this->FileList->Next;
+            delete FileDel;
+         }
+         this->ClientOut->Lines->Add("No file awaiting...");
+      }
+   }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::TxtIpChange(TObject *Sender)
+{
+   if (this->TxtIp->Text != "0.0.0.0")
+      this->cbWaitPoke->Checked = false;
 }
 //---------------------------------------------------------------------------
 
@@ -437,7 +630,7 @@ void __fastcall TMainForm::bSelectClick(TObject *Sender)
    for(int i = 0; i<this->lbLocalNet->Count ; i++) {
       if (this->lbLocalNet->Selected[i]) {
          String Data= this->lbLocalNet->Items->Strings[i];
-         TxtIp->Text = Data.SubString(Pos( "(", Data)+1, Data.Length()-Pos("(",Data)-1);
+         this->TxtIp->Text = Data.SubString(Pos( "(", Data)+1, Data.Length()-Pos("(",Data)-1);
       }
    }
 }
@@ -449,9 +642,9 @@ void __fastcall TMainForm::lbLocalNetDblClick(TObject *Sender)
 }
 //---------------------------------------------------------------------------
 
-void __fastcall TMainForm::lServRootDblClick(TObject *Sender)
+void __fastcall TMainForm::cbFileTimeClick(TObject *Sender)
 {
-   this->DisableFileTime = !this->DisableFileTime;
+   this->DisableFileTime = this->cbFileTime->Checked;
 }
 //---------------------------------------------------------------------------
 
@@ -482,7 +675,7 @@ void __fastcall TMainForm::IdTCPFileServerExecute(TIdContext *AContext)
 {
    String FileSize, FileName, FilePath;
    int ReadSize, FileTimeLow, FileTimeHigh;
-   TIdBytes Buffer;
+   TIdBytes Buffer, Message;
    //char CharBuffer[PAYLOADSIZE];
    TFileStream*Fichier=0;
    TByteDynArray RunningKey;
@@ -494,61 +687,90 @@ void __fastcall TMainForm::IdTCPFileServerExecute(TIdContext *AContext)
    FileTimeLow = StrToInt(AContext->Connection->Socket->ReadLn());
    FileTimeHigh = StrToInt(AContext->Connection->Socket->ReadLn());
 
-   this->ServerOut->Lines->Add("File: " + FileName);
-   //this->ServerOut->Lines->Add("Size: " + FileSize);
+   if(FileName == "?Message*:" && FileTimeLow == 0 && FileTimeHigh == 0) {
+      this->ServerOut->Lines->Add("Message");
+      AContext->Connection->Socket->WriteLn("OK");
+      Message.set_length(StrToInt(FileSize));
 
-   FilePath = PathSortie + "\\" + FileName;
-   ForceDirectories(ExtractFilePath(FilePath));
-   //FILE*Fichier = fopen(AnsiString(FileName).c_str(),"wb");
-   Fichier=new TFileStream( FilePath, fmOpenWrite | fmCreate ); // fmOverwrite
+      RunningKey = SetRunKey(this->KeyString + FileName + FileSize);
 
-   this->PGBarRecvPart->Max=StrToInt64(FileSize)/PAYLOADSIZE;
-   this->PGBarRecvPart->Position=0;
+      for(int i=StrToInt(FileSize) ; i>0 ; i=i-PAYLOADSIZE ) {
+         ReadSize = i>=PAYLOADSIZE?PAYLOADSIZE:i;
+         Buffer.set_length(0);
+         AContext->Connection->Socket->ReadBytes(Buffer,ReadSize);
 
-   AContext->Connection->Socket->WriteLn("OK");
+         if (cbEncrypt->Checked)
+            RunningKey = this->OFBCipher(Buffer, ReadSize, this->KeyString, RunningKey);
 
-   //192-bit (24-byte)
-   RunningKey = SetRunKey(this->KeyString + FileName + FileSize);
+         for ( int j=0; j<ReadSize; j++)
+            Message[j+(StrToInt(FileSize)-i)] = Buffer[j];
 
-   for( __int64 i=StrToInt64(FileSize) ; i>0 ; i=i-PAYLOADSIZE ) {
-      ReadSize = i>=PAYLOADSIZE?PAYLOADSIZE:i;
-      Buffer.set_length(0);
-      AContext->Connection->Socket->ReadBytes(Buffer,ReadSize);
-
-      /*for (int j=0; j <= ReadSize; j++) {
-         CharBuffer[j] = BytesToChar(Buffer, j);
-      }*/
-
-      if (cbEncrypt->Checked)
-         RunningKey = this->OFBCipher(Buffer, ReadSize, this->KeyString, RunningKey);
-
-      //fwrite(CharBuffer,1,ReadSize,Fichier);
-      //Fichier->Write(Buffer, ReadSize);
-      Fichier->WriteData(Buffer, ReadSize);
-      //Fichier->WriteBuffer(Buffer, ReadSize);
-      this->PGBarRecvPart->Position+=1;
-
-      if (i%32768 == 0) {
-         AContext->Connection->Socket->WriteLn("OK");
-         this->Invalidate();
-         Application->ProcessMessages();
+         if (i%32768 == 0) {
+            AContext->Connection->Socket->WriteLn("OK");
+            this->Invalidate();
+            Application->ProcessMessages();
+         }
       }
+      //fClipboard->mText->Lines->Add(BytesToString(Message));
+      fClipboard->mText->Lines->Add("Received:");
+      fClipboard->mText->Lines->Add(WideStringOf(Message));
+   } else {
+      this->ServerOut->Lines->Add("File: " + FileName);
+      //this->ServerOut->Lines->Add("Size: " + FileSize);
+
+      FilePath = PathSortie + "\\" + FileName;
+      ForceDirectories(ExtractFilePath(FilePath));
+      //FILE*Fichier = fopen(AnsiString(FileName).c_str(),"wb");
+      Fichier=new TFileStream( FilePath, fmOpenWrite | fmCreate ); // fmOverwrite
+
+      this->PGBarRecvPart->Max=StrToInt64(FileSize)/PAYLOADSIZE;
+      this->PGBarRecvPart->Position=0;
+
+      AContext->Connection->Socket->WriteLn("OK");
+
+      //192-bit (24-byte)
+      RunningKey = SetRunKey(this->KeyString + FileName + FileSize);
+
+      for( __int64 i=StrToInt64(FileSize) ; i>0 ; i=i-PAYLOADSIZE ) {
+         ReadSize = i>=PAYLOADSIZE?PAYLOADSIZE:i;
+         Buffer.set_length(0);
+         AContext->Connection->Socket->ReadBytes(Buffer,ReadSize);
+
+         /*for (int j=0; j <= ReadSize; j++) {
+            CharBuffer[j] = BytesToChar(Buffer, j);
+         }*/
+
+         if (cbEncrypt->Checked)
+            RunningKey = this->OFBCipher(Buffer, ReadSize, this->KeyString, RunningKey);
+
+         //fwrite(CharBuffer,1,ReadSize,Fichier);
+         //Fichier->Write(Buffer, ReadSize);
+         Fichier->WriteData(Buffer, ReadSize);
+         //Fichier->WriteBuffer(Buffer, ReadSize);
+         this->PGBarRecvPart->Position+=1;
+
+         if (i%32768 == 0) {
+            AContext->Connection->Socket->WriteLn("OK");
+            this->Invalidate();
+            Application->ProcessMessages();
+         }
+      }
+
+      //fclose(Fichier);
+      delete Fichier;
+
+      if (!DisableFileTime) {
+         FILETIME modtime;
+         HANDLE fh = CreateFileW(FilePath.c_str(), GENERIC_READ | FILE_WRITE_ATTRIBUTES, 0, NULL, OPEN_EXISTING, 0, NULL);
+         modtime.dwLowDateTime  = FileTimeLow;
+         modtime.dwHighDateTime = FileTimeHigh;
+         SetFileTime( fh, NULL, NULL, &modtime);
+         CloseHandle(fh);
+      }
+
+      this->PGBarRecvPart->Position=0;
+      this->ServerOut->Lines->Add("Received: " + PathSortie + "\\" + FileName);
    }
-
-   //fclose(Fichier);
-   delete Fichier;
-
-   if (!DisableFileTime) {
-      FILETIME modtime;
-      HANDLE fh = CreateFileW(FilePath.c_str(), GENERIC_READ | FILE_WRITE_ATTRIBUTES, 0, NULL, OPEN_EXISTING, 0, NULL);
-      modtime.dwLowDateTime  = FileTimeLow;
-      modtime.dwHighDateTime = FileTimeHigh;
-      SetFileTime( fh, NULL, NULL, &modtime);
-      CloseHandle(fh);
-   }
-
-   this->PGBarRecvPart->Position=0;
-   this->ServerOut->Lines->Add("Received: " + PathSortie + "\\" + FileName);
 }
 //---------------------------------------------------------------------------
 

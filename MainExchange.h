@@ -11,6 +11,7 @@
 #include <Math.hpp>
 
 #include "SelPassKey.h"
+#include "Clipboard.h"
 
 #include <Dialogs.hpp>
 #include <ExtCtrls.hpp>
@@ -28,15 +29,17 @@
 #include <IdTCPConnection.hpp>
 #include <IdTCPServer.hpp>
 #include <IdContext.hpp>
+#include <Vcl.Buttons.hpp>
 
-class FileStack
+class tFileList
 {
     public:
         String Path;
+        String FileRoot;
         __int64 Size;
         //int Time;
         unsigned long TimeLow, TimeHigh;
-        FileStack *Next;
+        tFileList *Next;
 };
 //---------------------------------------------------------------------------
 class TMainForm : public TForm
@@ -78,6 +81,10 @@ __published: // Composants gérés par l'EDI
    TLabel *lLblLocalIP;
    TLabel *lDbg;
    TCheckBox *cbEncrypt;
+   TButton *bPoke;
+   TCheckBox *cbWaitPoke;
+   TCheckBox *cbFileTime;
+   TBitBtn *bbMessage;
         void __fastcall CmdServClick(TObject *Sender);
         void __fastcall CmdSendClick(TObject *Sender);
         void __fastcall SpeedUpDateTimer(TObject *Sender);
@@ -98,18 +105,26 @@ __published: // Composants gérés par l'EDI
    void __fastcall lNameDblClick(TObject *Sender);
    void __fastcall TxtPortExit(TObject *Sender);
    void __fastcall cbEncryptClick(TObject *Sender);
-   void __fastcall lServRootDblClick(TObject *Sender);
+   void __fastcall ServerOutMouseDown(TObject *Sender, TMouseButton Button, TShiftState Shift,
+          int X, int Y);
+   void __fastcall ClientOutMouseDown(TObject *Sender, TMouseButton Button, TShiftState Shift,
+          int X, int Y);
+   void __fastcall bPokeClick(TObject *Sender);
+   void __fastcall cbWaitPokeClick(TObject *Sender);
+   void __fastcall TxtIpChange(TObject *Sender);
+   void __fastcall cbFileTimeClick(TObject *Sender);
+   void __fastcall bbMessageClick(TObject *Sender);
 private: // Déclarations de l'utilisateur
-        void __fastcall SearchFiles(String FilePath);
-        void __fastcall DropFiles(TMessage &Message);
-        void __fastcall SendFile(String FileRoot);
+        int SearchFiles(String FilePath, String FileRoot);
+        void DropFiles(TMessage &Message);
+        void SendFile();
         TByteDynArray SetRunKey(String Src);
         TByteDynArray OFBCipher(TIdBytes Data, int Size, String Key, TByteDynArray RunningKey);
 
         int LastPGSendPos;
         int LastPGRecvPos;
-        FileStack *FilePile;
-        int CmpSearch, CmpSend;
+        tFileList *FileList;
+        int CmpSend;
         String PathSortie;
         bool DisableFileTime;
 
@@ -120,7 +135,7 @@ private: // Déclarations de l'utilisateur
         TStringList *LocalNetTTL;
 public: // Déclarations de l'utilisateur
         __fastcall TMainForm(TComponent* Owner);
-
+        void SendMessage(String Message);
 
         #pragma option push -winl
         BEGIN_MESSAGE_MAP
