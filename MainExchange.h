@@ -114,6 +114,7 @@ __published: // Composants gérés par l'EDI
    void __fastcall TxtIpChange(TObject *Sender);
    void __fastcall cbFileTimeClick(TObject *Sender);
    void __fastcall bbMessageClick(TObject *Sender);
+   void __fastcall lbLocalNetClick(TObject *Sender);
 private: // Déclarations de l'utilisateur
         int SearchFiles(String FilePath, String FileRoot);
         void DropFiles(TMessage &Message);

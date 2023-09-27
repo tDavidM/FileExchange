@@ -36,7 +36,6 @@ void __fastcall TMainForm::CmdServClick(TObject *Sender)
 {
    if (this->IdTCPFileServer->Active) {
       this->IdTCPFileServer->Active = false;
-      this->bPoke->Enabled = false;
       this->ServerOut->Lines->Add("Deactivate");
       this->CmdServ->Caption = "Activate";
       this->lServRoot->Caption = "Target Directory:";
@@ -45,7 +44,6 @@ void __fastcall TMainForm::CmdServClick(TObject *Sender)
       if(SelectDirectory("Select the Directory where the files will be placed","", PathSortie)) {
          //PntServ = new ThServ(false,sortie+"\\");
          IdTCPFileServer->Active = true;
-         this->bPoke->Enabled = true;
          this->ServerOut->Lines->Add("Activate, port: " + TxtPort->Text);
          this->ServerOut->Lines->Add("   Root: " + PathSortie);
          if (DisableFileTime)
@@ -480,6 +478,7 @@ void __fastcall TMainForm::UpdateListTimer(TObject *Sender)
             this->LocalNetList->Delete(this->LocalNetList->IndexOfName(this->LocalNetTTL->Names[i]));
             this->LocalNetTTL->Delete(i);
             this->lbLocalNet->Clear();
+            this->bPoke->Enabled = false;
             for(int j = 0; j<this->LocalNetList->Count ; j++)
                this->lbLocalNet->Items->Add(this->LocalNetList->Values[this->LocalNetList->Names[j]] + " (" + this->LocalNetList->Names[j] + ")");
          }
@@ -490,6 +489,15 @@ void __fastcall TMainForm::UpdateListTimer(TObject *Sender)
       this->lLocalIP->Caption = IdIPWatch->CurrentIP;
    } catch (Exception& e) {
       this->lLocalIP->Caption = IdIPWatch->CurrentIP;
+   }
+}
+//---------------------------------------------------------------------------
+
+void __fastcall TMainForm::lbLocalNetClick(TObject *Sender)
+{
+   for(int i = 0; i<this->lbLocalNet->Count ; i++) {
+      if (this->lbLocalNet->Selected[i] && IdTCPFileServer->Active)
+         this->bPoke->Enabled = true;
    }
 }
 //---------------------------------------------------------------------------
@@ -555,7 +563,19 @@ void __fastcall TMainForm::IdUDPNetServerUDPRead(TIdUDPListenerThread *AThread, 
       }
    } else if (RawData.Pos("TigerMessage:") == 1) {
       if (this->CmpSend == 0) {
+
+         TNotifyEvent cbWaitPokeClickEvent, TxtIpChangeEvent; // Sorry -_-'
+         cbWaitPokeClickEvent = this->cbWaitPoke->OnClick;
+         TxtIpChangeEvent     = this->TxtIp->OnChange;
+         this->cbWaitPoke->OnClick = NULL;
+         this->TxtIp->OnChange = NULL;
+
          this->TxtIp->Text = RawData.SubString(Pos(":",RawData)+1, Pos(">",RawData)-Pos(":",RawData)-1);
+
+         this->cbWaitPoke->Checked = false;
+         this->cbWaitPoke->OnClick = cbWaitPokeClickEvent; // = cbWaitPokeClick;
+         this->TxtIp->OnChange     = TxtIpChangeEvent; // = TxtIpChange;
+
          this->SendFile();
 
          this->TxtPort->Enabled = true;
@@ -621,7 +641,9 @@ void __fastcall TMainForm::TxtIpChange(TObject *Sender)
 void __fastcall TMainForm::bClearClick(TObject *Sender)
 {
    this->LocalNetList->Clear();
+   this->LocalNetTTL->Clear();
    lbLocalNet->Clear();
+   this->bPoke->Enabled = false;
 }
 //---------------------------------------------------------------------------
 

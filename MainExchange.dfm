@@ -163,12 +163,12 @@ object MainForm: TMainForm
       TabOrder = 2
     end
     object cbFileTime: TCheckBox
-      Left = 152
+      Left = 176
       Top = 218
-      Width = 169
+      Width = 145
       Height = 17
       Alignment = taLeftJustify
-      Caption = 'Deactivate received Date/Time'
+      Caption = 'Ignore received Date/Time'
       TabOrder = 3
       OnClick = cbFileTimeClick
     end
@@ -310,6 +310,7 @@ object MainForm: TMainForm
       Height = 120
       ItemHeight = 13
       TabOrder = 1
+      OnClick = lbLocalNetClick
       OnDblClick = lbLocalNetDblClick
     end
     object bClear: TButton
