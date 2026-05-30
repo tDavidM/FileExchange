@@ -47,5 +47,6 @@ object fClipboard: TfClipboard
     Height = 21
     Anchors = [akLeft, akRight, akBottom]
     TabOrder = 2
+    OnKeyPress = eTextKeyPress
   end
 end

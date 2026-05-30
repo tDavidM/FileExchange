@@ -17,6 +17,7 @@ __published:	// IDE-managed Components
    void __fastcall bSendClick(TObject *Sender);
    void __fastcall mTextMouseDown(TObject *Sender, TMouseButton Button, TShiftState Shift,
           int X, int Y);
+    void __fastcall eTextKeyPress(TObject *Sender, System::WideChar &Key);
 private:	// User declarations
 public:		// User declarations
    __fastcall TfClipboard(TComponent* Owner);

@@ -14,6 +14,7 @@
 #include "tiger.c"
 
 #define PAYLOADSIZE 4096
+#define MESSAGESIZE 1024
 #define DIGESTSIZE 24
 
 typedef unsigned long long int word64;
@@ -307,59 +308,52 @@ void TMainForm::SendFile()
 //---------------------------------------------------------------------------
 void TMainForm::SendMessage(String Message)
 {
-   String Data;
-   TBytes MessageBytes;
-   int ReadSize;
+   String Data = "";
    TIdBytes Buffer;
+   String IPAddr;
    TByteDynArray RunningKey;
+
+   if (this->TxtIp->Text != "")
+      IPAddr = TxtIp->Text;
+   else {
+      for(int i = 0; i<this->lbLocalNet->Count ; i++) {
+         if (this->lbLocalNet->Selected[i]) {
+            Data= this->lbLocalNet->Items->Strings[i];
+            IPAddr = Data.SubString(Pos( "(", Data)+1, Data.Length()-Pos("(",Data)-1);
+         }
+      }
+   }
 
    this->ClientOut->Lines->Add("Sending message");
    try
    {
-      IdTCPFileClient->Host = TxtIp->Text;
-      IdTCPFileClient->Connect();
-      this->ClientOut->Lines->Add("Working (" + IdTCPFileClient->Socket->Binding->PeerIP + "): ");
-      Application->ProcessMessages();
-
-      MessageBytes = WideBytesOf(Message);
-
-      IdTCPFileClient->Socket->WriteLn(IntToStr(MessageBytes.Length));
-      IdTCPFileClient->Socket->WriteLn("?Message*:", TIdTextEncoding_UTF8);
-      IdTCPFileClient->Socket->WriteLn(IntToStr(0));
-      IdTCPFileClient->Socket->WriteLn(IntToStr(0));
-
       //192-bit (24-byte)
-      RunningKey = SetRunKey(this->KeyString + "?Message*:" + IntToStr(MessageBytes.Length));
+      RunningKey = SetRunKey(this->KeyString + "TigerMessage" + IntToStr(Message.Length()));
 
-      Data = IdTCPFileClient->Socket->ReadLn();
-      this->ClientOut->Lines->Add("Server: " + Data);
+      this->ClientOut->Lines->Add("Server: " + IPAddr);
+      this->IdUDPNetClient->Host = IPAddr;
+      this->IdUDPNetClient->BroadcastEnabled = false;
+      this->IdUDPNetClient->Active = true;
 
-      for( int i=MessageBytes.Length ; i>0 ; i=i-PAYLOADSIZE ) {
-         ReadSize = i>=PAYLOADSIZE?PAYLOADSIZE:i;
-         Buffer.set_length(ReadSize);
+      Message = Message.SubString(1, MESSAGESIZE);
+      if (cbEncrypt->Checked && Message.Length() > 0) {
+         Buffer = IndyTextEncoding_UTF8()->GetBytes(Message);
+         RunningKey = this->OFBCipher(Buffer, Buffer.Length, this->KeyString, RunningKey);
+         for ( int j=0; j<Buffer.Length; j++)
+            Data += LowerCase(ByteToHex(Buffer[j]));
+      } else
+         Data = Message;
 
-         for ( int j=0; j<ReadSize; j++)
-            Buffer[j] = MessageBytes[j+(MessageBytes.Length-i)];
+      this->IdUDPNetClient->Send("TigerMessage:" + Data);
 
-         if (cbEncrypt->Checked && ReadSize>0)
-            RunningKey = this->OFBCipher(Buffer, ReadSize, this->KeyString, RunningKey);
-
-         IdTCPFileClient->Socket->Write(Buffer, ReadSize);
-         Application->ProcessMessages();
-         if (i%32768 == 0) {
-            Data = IdTCPFileClient->Socket->ReadLn();
-            this->Invalidate();
-            Application->ProcessMessages();
-         }
-      }
-      IdTCPFileClient->Disconnect();
+      this->IdUDPNetClient->Active = false;
+      this->IdUDPNetClient->BroadcastEnabled = true;
+      this->IdUDPNetClient->Host = "";
    }
    catch(Exception& e)
    {
-      IdTCPFileClient->Disconnect();
-
       this->ClientOut->Lines->Add("ERROR: Message");
-         this->ClientOut->Lines->Add(e.Message);
+      this->ClientOut->Lines->Add(e.Message);
    }
 }
 
@@ -536,6 +530,8 @@ void __fastcall TMainForm::IdUDPNetServerUDPRead(TIdUDPListenerThread *AThread, 
    String RawData = BytesToString(AData);
    String Data, Name, IPAddr;
    int ListPos;
+   TByteDynArray RunningKey;
+   TIdBytes Buffer;
 
    if (RawData.Pos("TigerExchange:") == 1) {
       IPAddr = RawData.SubString(Pos(":",RawData)+1, Pos(">",RawData)-Pos(":",RawData)-1);
@@ -562,7 +558,7 @@ void __fastcall TMainForm::IdUDPNetServerUDPRead(TIdUDPListenerThread *AThread, 
          }
       }
    } else if (RawData.Pos("TigerMessage:") == 1) {
-      if (this->CmpSend == 0) {
+      if (this->CmpSend == 0 && RawData.SubString(RawData.Length() - 4, 5) == ">Poke") {
 
          TNotifyEvent cbWaitPokeClickEvent, TxtIpChangeEvent; // Sorry -_-'
          cbWaitPokeClickEvent = this->cbWaitPoke->OnClick;
@@ -583,6 +579,29 @@ void __fastcall TMainForm::IdUDPNetServerUDPRead(TIdUDPListenerThread *AThread, 
          this->CmpSend = 0;
          this->PGBarSendTotal->Position = 0;
          this->PGBarSendTotal->Max = 100;
+      } else {
+         this->ServerOut->Lines->Add("Message");
+         RawData = RawData.SubString(Pos(":",RawData)+1, RawData.Length()-13);
+         //192-bit (24-byte)
+         RunningKey = SetRunKey(this->KeyString + "TigerMessage" + IntToStr(RawData.Length()/2));
+
+         if (cbEncrypt->Checked && RawData.Length() > 0) {
+            Buffer.set_length(RawData.Length()/2);
+            for ( int j=0; j<RawData.Length()/2; j++) {
+               Data = "0x";
+               Data += RawData[j*2+1];
+               Data += RawData[j*2+2];
+               Buffer[j] = (unsigned char)StrToInt(Data);
+            }
+
+            RunningKey = this->OFBCipher(Buffer, Buffer.Length, this->KeyString, RunningKey);
+            Data = IndyTextEncoding_UTF8()->GetString(Buffer);
+
+         } else
+            Data = RawData;
+
+         fClipboard->mText->Lines->Add("Received:");
+         fClipboard->mText->Lines->Add(Data);
       }
    }
 }
