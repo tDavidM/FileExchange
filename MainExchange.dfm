@@ -3,7 +3,7 @@ object MainForm: TMainForm
   Top = 117
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
-  Caption = 'Exchange V2.2.1'
+  Caption = 'Exchange V2.3.2'
   ClientHeight = 248
   ClientWidth = 937
   Color = clBtnFace
@@ -89,71 +89,71 @@ object MainForm: TMainForm
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
-  object BoxServ: TGroupBox
+  object gbServ: TGroupBox
     Left = 8
     Top = 4
     Width = 329
     Height = 238
-    Caption = 'Server'
+    Caption = 'Serveur'
     TabOrder = 0
-    object Label1: TLabel
+    object lblRecv: TLabel
       Left = 9
       Top = 219
-      Width = 36
+      Width = 52
       Height = 13
-      Caption = 'Inbond:'
+      Caption = 'Reception:'
     end
-    object RecvSpeed: TLabel
-      Left = 70
+    object lblRecvSpeed: TLabel
+      Left = 69
       Top = 219
       Width = 32
       Height = 13
       Caption = '0 Ko/s'
     end
-    object lServRoot: TLabel
+    object lblServRoot: TLabel
       Left = 9
       Top = 182
-      Width = 79
+      Width = 106
       Height = 13
-      Caption = 'Target Directory:'
+      Caption = 'R'#233'pertoire destination:'
     end
-    object lLocalIP: TLabel
+    object lblLocalIPVal: TLabel
       Left = 69
       Top = 18
       Width = 33
       Height = 13
       Caption = '0.0.0.0'
     end
-    object lLblLocalIP: TLabel
+    object lblLocalIP: TLabel
       Left = 9
       Top = 18
-      Width = 45
+      Width = 51
       Height = 13
-      Caption = 'Local IP: '
+      Caption = 'IP Locale: '
     end
-    object CmdServ: TButton
+    object bStartServ: TButton
       Left = 209
       Top = 12
       Width = 112
       Height = 24
-      Caption = 'Activate'
+      Caption = 'Activer'
       TabOrder = 0
-      OnClick = CmdServClick
+      OnClick = bStartServClick
     end
-    object ServerOut: TMemo
+    object mServerOut: TMemo
       Left = 8
       Top = 41
       Width = 312
       Height = 134
-      Hint = 'Shift+Clic to erase'
+      Hint = 'Ctrl+Clic pour effacer'
       ParentShowHint = False
       ReadOnly = True
       ScrollBars = ssVertical
       ShowHint = True
       TabOrder = 1
-      OnMouseDown = ServerOutMouseDown
+      OnMouseDown = mServerOutMouseDown
     end
-    object PGBarRecvPart: TProgressBar
+    object prgBarRecvPart: TProgressBar
       Left = 8
       Top = 201
       Width = 313
@@ -165,74 +165,74 @@ object MainForm: TMainForm
     object cbFileTime: TCheckBox
       Left = 176
       Top = 218
-      Width = 145
+      Width = 144
       Height = 17
       Alignment = taLeftJustify
-      Caption = 'Ignore received Date/Time'
+      Caption = 'Ignorer Date/Heure re'#231'ue'
       TabOrder = 3
       OnClick = cbFileTimeClick
     end
   end
-  object BoxSend: TGroupBox
+  object gbSend: TGroupBox
     Left = 344
     Top = 4
     Width = 329
     Height = 238
     Caption = 'Client'
     TabOrder = 1
-    object MsgIp: TLabel
+    object lblMsgIp: TLabel
       Left = 9
       Top = 18
-      Width = 88
+      Width = 106
       Height = 13
-      Caption = 'Server IP Address:'
-      OnDblClick = MsgIpDblClick
+      Caption = 'Adresse Ip du serveur:'
+      OnDblClick = lblMsgIpDblClick
     end
-    object Label2: TLabel
+    object lblSend: TLabel
       Left = 9
       Top = 219
-      Width = 44
+      Width = 30
       Height = 13
-      Caption = 'Outbond:'
+      Caption = 'Envoi:'
     end
-    object SendSpeed: TLabel
-      Left = 82
+    object lblSendSpeed: TLabel
+      Left = 47
       Top = 219
       Width = 32
       Height = 13
       Caption = '0 Ko/s'
     end
-    object TxtIp: TEdit
+    object edtIp: TEdit
       Left = 120
       Top = 14
       Width = 109
       Height = 21
       TabOrder = 0
-      OnChange = TxtIpChange
+      OnChange = edtIpChange
     end
-    object CmdSend: TButton
+    object bCmdSend: TButton
       Left = 235
       Top = 12
       Width = 86
       Height = 24
-      Caption = 'Send'
+      Caption = 'Envoyer'
       TabOrder = 1
-      OnClick = CmdSendClick
+      OnClick = bCmdSendClick
     end
-    object ClientOut: TMemo
+    object mClientOut: TMemo
       Left = 8
       Top = 41
       Width = 313
       Height = 134
-      Hint = 'Shift+Clic to erase'
+      Hint = 'Ctrl+Clic pour effacer'
       ParentShowHint = False
       ReadOnly = True
       ScrollBars = ssVertical
       ShowHint = True
       TabOrder = 2
-      OnMouseDown = ClientOutMouseDown
+      OnMouseDown = mClientOutMouseDown
     end
-    object PGBarSendTotal: TProgressBar
+    object prgBarSendTotal: TProgressBar
       Left = 8
       Top = 201
       Width = 313
@@ -242,7 +242,7 @@ object MainForm: TMainForm
       Smooth = True
       TabOrder = 3
     end
-    object PGBarSendPart: TProgressBar
+    object prgBarSendPart: TProgressBar
       Left = 8
       Top = 181
       Width = 313
@@ -252,37 +252,37 @@ object MainForm: TMainForm
       TabOrder = 4
     end
     object cbWaitPoke: TCheckBox
-      Left = 192
+      Left = 160
       Top = 218
-      Width = 129
+      Width = 161
       Height = 17
       Alignment = taLeftJustify
-      Caption = 'Wait to receive a Poke'
+      Caption = 'Attendre de recevoir un Poke'
       TabOrder = 5
       OnClick = cbWaitPokeClick
     end
   end
-  object BoxDiscover: TGroupBox
+  object gbDiscover: TGroupBox
     Left = 680
     Top = 4
     Width = 250
     Height = 238
-    Caption = 'Network'
+    Caption = 'R'#233'seau'
     TabOrder = 2
-    object lName: TLabel
+    object lblName: TLabel
       Left = 9
       Top = 41
-      Width = 75
+      Width = 69
       Height = 13
-      Caption = 'Machine Name:'
-      OnDblClick = lNameDblClick
+      Caption = 'Nom Machine:'
+      OnDblClick = lblNameDblClick
     end
-    object MsgPort: TLabel
+    object lblMsgPort: TLabel
       Left = 9
       Top = 16
-      Width = 93
+      Width = 99
       Height = 13
-      Caption = 'Port (Client/Server):'
+      Caption = 'Port (Client/Serveur):'
     end
     object lDbg: TLabel
       Left = 149
@@ -294,10 +294,10 @@ object MainForm: TMainForm
       Caption = '0'
       Visible = False
     end
-    object eComputerName: TEdit
-      Left = 86
+    object edtComputerName: TEdit
+      Left = 96
       Top = 38
-      Width = 157
+      Width = 147
       Height = 21
       MaxLength = 20
       TabOrder = 0
@@ -318,7 +318,7 @@ object MainForm: TMainForm
       Top = 210
       Width = 69
       Height = 22
-      Caption = 'Refresh'
+      Caption = 'Rafraichir'
       TabOrder = 2
       OnClick = bClearClick
     end
@@ -327,18 +327,18 @@ object MainForm: TMainForm
       Top = 210
       Width = 69
       Height = 22
-      Caption = 'Select'
+      Caption = 'Selectionner'
       TabOrder = 3
       OnClick = bSelectClick
     end
-    object TxtPort: TEdit
+    object edtPort: TEdit
       Left = 192
       Top = 13
       Width = 51
       Height = 21
       TabOrder = 4
       Text = '1755'
-      OnExit = TxtPortExit
+      OnExit = edtPortExit
     end
     object cbEncrypt: TCheckBox
       Left = 9
@@ -347,7 +347,7 @@ object MainForm: TMainForm
       Height = 17
       Alignment = taLeftJustify
       BiDiMode = bdLeftToRight
-      Caption = 'Use Encryption'
+      Caption = 'Activer l'#39'encryption'
       ParentBiDiMode = False
       TabOrder = 5
       OnClick = cbEncryptClick
@@ -408,9 +408,9 @@ object MainForm: TMainForm
     Left = 40
     Top = 64
   end
-  object SpeedUpDate: TTimer
+  object SpeedUpdate: TTimer
     Interval = 750
-    OnTimer = SpeedUpDateTimer
+    OnTimer = SpeedUpdateTimer
     Left = 112
     Top = 64
   end

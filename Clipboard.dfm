@@ -1,7 +1,7 @@
 object fClipboard: TfClipboard
   Left = 0
   Top = 0
-  Caption = 'Clipboard'
+  Caption = 'Presse-Papier'
   ClientHeight = 279
   ClientWidth = 617
   Color = clBtnFace
@@ -12,6 +12,7 @@ object fClipboard: TfClipboard
   Font.Style = []
   OldCreateOrder = False
   Position = poMainFormCenter
+  OnShow = FormShow
   DesignSize = (
     617
     279)
@@ -23,7 +24,7 @@ object fClipboard: TfClipboard
     Width = 75
     Height = 25
     Anchors = [akRight, akBottom]
-    Caption = 'Send'
+    Caption = 'Envoyer'
     TabOrder = 0
     OnClick = bSendClick
   end
@@ -32,7 +33,7 @@ object fClipboard: TfClipboard
     Top = 8
     Width = 602
     Height = 234
-    Hint = 'Shift+Clic to erase'
+    Hint = 'Ctrl+Clic pour effacer'
     Anchors = [akLeft, akTop, akRight, akBottom]
     ParentShowHint = False
     ReadOnly = True

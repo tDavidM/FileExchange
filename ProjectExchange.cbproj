@@ -171,12 +171,24 @@
         <BCC_Defines>NDEBUG;$(BCC_Defines);$(BCC_Defines)</BCC_Defines>
     </PropertyGroup>
     <ItemGroup>
+        <CppCompile Include="Argon2.cpp">
+            <BuildOrder>13</BuildOrder>
+        </CppCompile>
+        <None Include="Argon2.h">
+            <BuildOrder>12</BuildOrder>
+        </None>
         <CppCompile Include="Clipboard.cpp">
             <Form>fClipboard</Form>
             <FormType>dfm</FormType>
             <DependentOn>Clipboard.h</DependentOn>
             <BuildOrder>6</BuildOrder>
         </CppCompile>
+        <CppCompile Include="Crypto.cpp">
+            <BuildOrder>11</BuildOrder>
+        </CppCompile>
+        <None Include="Crypto.h">
+            <BuildOrder>14</BuildOrder>
+        </None>
         <CppCompile Include="MainExchange.cpp">
             <Form>MainForm</Form>
             <DependentOn>MainExchange.h</DependentOn>
@@ -190,6 +202,12 @@
             <BuildOrder>-1</BuildOrder>
             <BuildOrder>0</BuildOrder>
         </ResFiles>
+        <CppCompile Include="rijndael.c">
+            <BuildOrder>7</BuildOrder>
+        </CppCompile>
+        <None Include="rijndael.h">
+            <BuildOrder>8</BuildOrder>
+        </None>
         <CppCompile Include="sboxes.c">
             <BuildOrder>4</BuildOrder>
         </CppCompile>
@@ -199,12 +217,18 @@
             <DependentOn>SelPassKey.h</DependentOn>
             <BuildOrder>3</BuildOrder>
         </CppCompile>
+        <CppCompile Include="sha256.c">
+            <BuildOrder>9</BuildOrder>
+        </CppCompile>
+        <None Include="sha256.h">
+            <BuildOrder>10</BuildOrder>
+        </None>
         <CppCompile Include="tiger.c">
             <BuildOrder>5</BuildOrder>
         </CppCompile>
         <FormResources Include="SelPassKey.dfm"/>
-        <FormResources Include="MainExchange.dfm"/>
         <FormResources Include="Clipboard.dfm"/>
+        <FormResources Include="MainExchange.dfm"/>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>
@@ -306,12 +330,6 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="tiger.c" Configuration="Debug" Class="ProjectFile">
-                    <Platform Name="Win32">
-                        <RemoteDir>.\</RemoteDir>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
                 <DeployFile Condition="'$(DynamicRTL)'=='true'" LocalName="$(BDS)\Redist\osx32\libcgcrtl.dylib" Class="DependencyModule">
                     <Platform Name="OSX32">
                         <Overwrite>true</Overwrite>
@@ -322,9 +340,21 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName="tiger.c" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win32">
+                        <RemoteDir>.\</RemoteDir>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName=".\ProjectExchange.tds" Configuration="Debug" Class="DebugSymbols">
                     <Platform Name="Win32">
                         <RemoteName>ProjectExchange.tds</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="rijndael.c" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win32">
+                        <RemoteDir>.\</RemoteDir>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -355,6 +385,12 @@
                     </Platform>
                 </DeployFile>
                 <DeployFile LocalName="sboxes.c" Configuration="Debug" Class="ProjectFile">
+                    <Platform Name="Win32">
+                        <RemoteDir>.\</RemoteDir>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName="sha256.c" Configuration="Debug" Class="ProjectFile">
                     <Platform Name="Win32">
                         <RemoteDir>.\</RemoteDir>
                         <Overwrite>true</Overwrite>
@@ -736,12 +772,12 @@
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
-                <ProjectRoot Platform="OSX32" Name="$(PROJECTNAME).app"/>
+                <ProjectRoot Platform="iOSSimulator" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Android" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="Win32" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
+                <ProjectRoot Platform="OSX32" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
-                <ProjectRoot Platform="iOSSimulator" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>
             </Deployment>
         </BorlandProject>

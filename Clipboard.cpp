@@ -16,23 +16,38 @@ __fastcall TfClipboard::TfClipboard(TComponent* Owner)
 {
 }
 //---------------------------------------------------------------------------
+void __fastcall TfClipboard::FormShow(TObject *Sender)
+{
+   (void)Sender;
+
+   this->Caption = STR_CLIPBOARD_CAP;
+   this->bSend->Caption = CAP_CLIPBOARD_BTN;
+   this->mText->Hint = STR_MEMO_HINT;
+}
+//---------------------------------------------------------------------------
 void __fastcall TfClipboard::bSendClick(TObject *Sender)
 {
-   if (MainForm->TxtIp->Text != "" || MainForm->lbLocalNet->ItemIndex >= 0) {
+   (void)Sender;
+
+   if (MainForm->edtIp->Text != "" || MainForm->lbLocalNet->ItemIndex >= 0) {
       if (this->eText->Text != "") {
-         this->mText->Lines->Add("Sent:");
+         this->mText->Lines->Add(MSG_SEND_MSG_INIT);
          this->mText->Lines->Add(this->eText->Text);
 
          MainForm->SendMessage(this->eText->Text);
          this->eText->Clear();
       }
    } else
-      ShowMessage("Specify the IP address of the server");
+      ShowMessage(MSG_SEND_IP_ERR);
 }
 //---------------------------------------------------------------------------
 void __fastcall TfClipboard::mTextMouseDown(TObject *Sender, TMouseButton Button,
           TShiftState Shift, int X, int Y)
 {
+   (void)Sender;
+   (void)X;
+   (void)Y;
+
    if (Button == mbLeft && Shift.Contains(ssCtrl)) {
       this->mText->Lines->Clear();
       this->eText->Clear();
@@ -43,6 +58,8 @@ void __fastcall TfClipboard::mTextMouseDown(TObject *Sender, TMouseButton Button
 void __fastcall TfClipboard::eTextKeyPress(TObject *Sender, System::WideChar &Key)
 
 {
+   (void)Sender;
+
    if (Key == VK_RETURN)
       this->bSend->Click();
 }

@@ -3,7 +3,7 @@ object fSelPassKey: TfSelPassKey
   Top = 0
   BorderIcons = []
   BorderStyle = bsSingle
-  Caption = 'Enter a Key'
+  Caption = 'Selection de la cl'#233
   ClientHeight = 72
   ClientWidth = 292
   Color = clBtnFace
@@ -14,14 +14,15 @@ object fSelPassKey: TfSelPassKey
   Font.Style = []
   OldCreateOrder = False
   Position = poMainFormCenter
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object lKey: TLabel
     Left = 8
     Top = 11
-    Width = 72
+    Width = 77
     Height = 13
-    Caption = 'Encryption Key'
+    Caption = 'Cl'#233' d'#39'encryption'
     OnDblClick = lKeyDblClick
   end
   object bOk: TButton
@@ -38,7 +39,7 @@ object fSelPassKey: TfSelPassKey
     Top = 40
     Width = 75
     Height = 25
-    Caption = 'Cancel'
+    Caption = 'Annuler'
     TabOrder = 1
     OnClick = bCancelClick
   end
@@ -50,13 +51,13 @@ object fSelPassKey: TfSelPassKey
     MaxLength = 24
     PasswordChar = '*'
     TabOrder = 2
+    OnKeyPress = eKeyKeyPress
   end
   object bbViewKey: TBitBtn
     Left = 255
     Top = 7
     Width = 29
     Height = 23
-    Hint = 'Show Key'
     Glyph.Data = {
       B6080000424DB608000000000000360400002800000030000000180000000100
       0800000000008004000000000000000000000001000000000000000000000000

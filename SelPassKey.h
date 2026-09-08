@@ -8,6 +8,8 @@
 #include <Vcl.StdCtrls.hpp>
 #include <Vcl.Forms.hpp>
 #include <Vcl.Buttons.hpp>
+
+#include "Crypto.h"
 //---------------------------------------------------------------------------
 class TfSelPassKey : public TForm
 {
@@ -23,10 +25,17 @@ __published:	// IDE-managed Components
    void __fastcall bOkClick(TObject *Sender);
    void __fastcall bTigerClick(TObject *Sender);
    void __fastcall lKeyDblClick(TObject *Sender);
+    void __fastcall FormShow(TObject *Sender);
+    void __fastcall eKeyKeyPress(TObject *Sender, System::WideChar &Key);
 private:	// User declarations
+   void TfSelPassKey::WipeString(String *input);
+   void TfSelPassKey::WipeUTF8String(UTF8String *input);
+   void TfSelPassKey::WipeEditBox(TEdit *input);
 public:		// User declarations
-   String        KeyString;
-   TByteDynArray KeyBytes;
+   byte sessionSalt[SESSION_SALT_SIZE];
+   byte argonSalt[ARGON_SALT_SIZE];
+   byte sessionKey[ARGON_HASH_SIZE];
+   byte rootPassword[TIGER_HASH_SIZE];
 
    __fastcall TfSelPassKey(TComponent* Owner);
 };
